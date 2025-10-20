@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@elevenlabs/client": "^0.8.0",
     "@tailwindcss/vite": "^4.1.14",
     "amazon-chime-sdk-js": "^2.23.0",
     "axios": "^1.12.2",
