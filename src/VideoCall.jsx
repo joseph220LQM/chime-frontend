@@ -17,8 +17,9 @@ export default function VideoCall({ meetingData, name }) {
   const [mozartActive, setMozartActive] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
-  const [localStream, setLocalStream] = useState(null); // 🔹 guardamos el stream real
+  const [localStream, setLocalStream] = useState(null);
 
+  // 🔹 Inicializa la reunión y Mozart automáticamente
   useEffect(() => {
     if (!meetingData) return;
 
@@ -29,11 +30,9 @@ export default function VideoCall({ meetingData, name }) {
     setMeetingSession(session);
 
     async function initDevices() {
-      // Obtenemos acceso real al stream de cámara y micrófono
+      // Acceso real a cámara y micrófono
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       setLocalStream(stream);
-
-      // Enlazamos la vista local de video
       videoRef.current.srcObject = stream;
 
       const audioInputs = await session.audioVideo.listAudioInputDevices();
@@ -45,23 +44,32 @@ export default function VideoCall({ meetingData, name }) {
       session.audioVideo.startLocalVideoTile();
       session.audioVideo.bindVideoElement(1, videoRef.current);
       session.audioVideo.start();
+
+      // 🚀 Conectamos Mozart automáticamente al finalizar setup
+      await connectMozart();
     }
 
     initDevices();
   }, [meetingData]);
 
+  // 🔹 Conexión con Mozart (automática)
   async function connectMozart() {
-    const resp = await fetch(`${import.meta.env.VITE_BACKEND}/api/get-conversation-token`);
-    const { token } = await resp.json();
-    const conv = await Conversation.startSession({
-      agentId: import.meta.env.VITE_AGENT_ID,
-      connectionType: "webrtc",
-      conversationToken: token,
-    });
-    conv.addEventListener("track", (event) => {
-      audioBotRef.current.srcObject = event.stream;
-    });
-    setMozartActive(true);
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_BACKEND}/api/get-conversation-token`);
+      const { token } = await resp.json();
+      const conv = await Conversation.startSession({
+        agentId: import.meta.env.VITE_AGENT_ID,
+        connectionType: "webrtc",
+        conversationToken: token,
+      });
+      conv.addEventListener("track", (event) => {
+        audioBotRef.current.srcObject = event.stream;
+      });
+      console.log("🤖 Mozart conectado automáticamente");
+      setMozartActive(true);
+    } catch (err) {
+      console.error("❌ Error al conectar con Mozart:", err);
+    }
   }
 
   // 🔹 Apagar cámara realmente
@@ -105,19 +113,16 @@ export default function VideoCall({ meetingData, name }) {
           {micEnabled ? "🎤 Silenciar Micrófono" : "🎙️ Activar Micrófono"}
         </button>
 
-        <button
-          onClick={connectMozart}
-          disabled={mozartActive}
-          className={`px-4 py-2 rounded-lg text-white font-medium transition ${
-            mozartActive ? "bg-purple-800" : "bg-purple-600 hover:bg-purple-700"
-          }`}
-        >
-          {mozartActive ? "🤖 Mozart conectado" : "🎧 Conectar Mozart"}
-        </button>
+        {mozartActive && (
+          <div className="text-purple-700 font-semibold text-center">
+            🤖 Mozart conectado automáticamente
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 
 
